@@ -1,8 +1,12 @@
-#!/bin/bash
-
-#filesdir=/home/vboxuser/yes
-filesdir=$1
-searchstr="yes"
-count_folders=$(find $filesdir -mindepth 1 -not -name ".*.sw*" -type f | wc -l)
-echo "$count_folders"
-echo $(grep -r "$searchstr" "$filesdir" | wc -l) 
+#!/bin/sh
+writefile=/home/vboxuser/yes/yeet/wr_file.txt
+writestr="yes"
+dirpath=$(dirname "$writefile")
+mkdir -p "$dirpath"
+if [ ! -d "$dirpath" ]
+then
+    echo "File was not created."
+    exit 1
+fi
+#prints the string, uses the file location as output
+echo "$writestr" > "$writefile"
