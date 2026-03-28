@@ -34,7 +34,7 @@ int main(int argc, char *argv[]){
                 syslog(LOG_ERR,"Write error: %s",strerror(errno_state));
                 exit (EXIT_FAILURE);
         }
-        syslog(LOG_DEBUG,"Writing %s to %s",argv[0],argv[1]);
+        syslog(LOG_DEBUG,"Writing %s to %s",argv[2],argv[1]);
         if (close(fd) == -1){
                 errno_state = errno;
                 syslog(LOG_ERR,"Close error: %s",strerror(errno_state));
