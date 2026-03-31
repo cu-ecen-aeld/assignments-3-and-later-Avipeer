@@ -17,6 +17,7 @@ bool do_system(const char *cmd)
  *   or false() if it returned a failure
 */
     int result = system(cmd);
+    //when failing - system returns -1
     if(result == -1){
         return false;
     }
@@ -61,6 +62,31 @@ bool do_exec(int count, ...)
  *   as second argument to the execv() command.
  *
 */
+    pid_t pid;
+    int err;
+    // The fork() call happens here
+    pid = fork();
+
+    if (pid < 0) {
+        // Error occurred
+        err = errno;
+        fprintf(stderr, "Error - fork() failed: %s", strerror(err));
+        return false;
+    }
+   else if (pid == 0) {
+        // This block is executed by the CHILD process
+        int rt;
+        rt = execv(command[0],command[1]);
+        if(rt == -1){
+            err = errno;
+            fprintf(stderr, "Error - execv() failed: %s", strerror(err));
+            return false;
+        }
+    } 
+    else {
+        // This block is executed by the PARENT process
+        wait(NULL);//ignore the reason the child exited
+    }
 
     va_end(args);
 
@@ -95,6 +121,41 @@ bool do_exec_redirect(const char *outputfile, int count, ...)
  *   The rest of the behaviour is same as do_exec()
  *
 */
+
+    pid_t pid;
+    int err;
+    // The fork() call happens here
+    pid = fork();
+
+    if (pid < 0) {
+        // Error occurred
+        err = errno;
+        fprintf(stderr, "Error - fork() failed: %s", strerror(err));
+        return false;
+    }
+   else if (pid == 0) {
+        // This block is executed by the CHILD process
+        FILE* output_file = fopen(outputfile,"w");
+        if(output_file == NULL){
+                    err = errno;
+            fprintf(output_file , "Error - failed to open file: %s", strerror(err));
+
+            return false;
+        }
+        int rt;
+        rt = execv(command[0],command[1]);
+        if(rt == -1){
+            err = errno;
+            fprintf(output_file, "Error - execv() failed: %s", strerror(err));
+            fclose(output_file);
+            return false;
+        }
+    } 
+    else {
+        // This block is executed by the PARENT process
+        wait(NULL);//ignore the reason the child exited
+    }
+
 
     va_end(args);
 
