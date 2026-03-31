@@ -5,7 +5,8 @@
 #include <unistd.h>
 #include <sys/types.h>
 #include <errno.h>
-#include <fcntl.h>
+ #include <string.h>
+#include <sys/wait.h>
 bool do_system(const char *command);
 
 bool do_exec(int count, ...);

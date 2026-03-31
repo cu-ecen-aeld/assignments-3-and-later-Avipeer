@@ -51,7 +51,7 @@ bool do_exec(int count, ...)
     command[count] = NULL;
     // this line is to avoid a compile warning before your implementation is complete
     // and may be removed
-    command[count] = command[count];
+    //command[count] = command[count];
 
 /*
  * TODO:
@@ -65,6 +65,7 @@ bool do_exec(int count, ...)
     pid_t pid;
     int err;
     // The fork() call happens here
+    fflush(stdout);//flushs the buffer before fork
     pid = fork();
 
     if (pid < 0) {
@@ -76,7 +77,7 @@ bool do_exec(int count, ...)
    else if (pid == 0) {
         // This block is executed by the CHILD process
         int rt;
-        rt = execv(command[0],command[1]);
+        rt = execv(command[0],command);
         if(rt == -1){
             err = errno;
             fprintf(stderr, "Error - execv() failed: %s", strerror(err));
@@ -143,7 +144,7 @@ bool do_exec_redirect(const char *outputfile, int count, ...)
             return false;
         }
         int rt;
-        rt = execv(command[0],command[1]);
+        rt = execv(command[0],command);
         if(rt == -1){
             err = errno;
             fprintf(output_file, "Error - execv() failed: %s", strerror(err));
