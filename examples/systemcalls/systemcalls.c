@@ -51,8 +51,8 @@ bool do_exec(int count, ...)
     command[count] = NULL;
     // this line is to avoid a compile warning before your implementation is complete
     // and may be removed
-    //command[count] = command[count];
-
+    command[count] = command[count];
+    va_end(args);
 /*
  * TODO:
  *   Execute a system command by calling fork, execv(),
@@ -63,35 +63,36 @@ bool do_exec(int count, ...)
  *
 */
     pid_t pid;
-    int err;
     // The fork() call happens here
     fflush(stdout);//flushs the buffer before fork
     pid = fork();
 
     if (pid < 0) {
         // Error occurred
-        err = errno;
-        fprintf(stderr, "Error - fork() failed: %s", strerror(err));
+        fprintf(stderr, "Error - fork() failed: %s", strerror(errno));
         return false;
     }
-   else if (pid == 0) {
+    else if (pid == 0) {
         // This block is executed by the CHILD process
         int rt;
         rt = execv(command[0],command);
         if(rt == -1){
-            err = errno;
-            fprintf(stderr, "Error - execv() failed: %s", strerror(err));
-            return false;
+            fprintf(stderr, "Error - execv() failed: %s", strerror(errno));
+            exit(EXIT_FAILURE);
         }
+        exit(EXIT_FAILURE);
     } 
     else {
-        // This block is executed by the PARENT process
-        wait(NULL);//ignore the reason the child exited
+        // PARENT PROCESS
+        int status;
+        // Wait specifically for the child we just created
+        if (waitpid(pid, &status, 0) == -1) {
+            return false;
+        }
+        // Check if child exited normally AND with exit code 0
+        return (WIFEXITED(status) && WEXITSTATUS(status) == 0);
     }
 
-    va_end(args);
-
-    return true;
 }
 
 /**
@@ -101,6 +102,7 @@ bool do_exec(int count, ...)
 */
 bool do_exec_redirect(const char *outputfile, int count, ...)
 {
+    fprintf(stdout,"redirect file: %s\n",outputfile);
     va_list args;
     va_start(args, count);
     char * command[count+1];
@@ -114,7 +116,7 @@ bool do_exec_redirect(const char *outputfile, int count, ...)
     // and may be removed
     command[count] = command[count];
 
-
+ va_end(args);
 /*
  * TODO
  *   Call execv, but first using https://stackoverflow.com/a/13784315/1446624 as a refernce,
@@ -124,41 +126,52 @@ bool do_exec_redirect(const char *outputfile, int count, ...)
 */
 
     pid_t pid;
-    int err;
+    fflush(stdout);//flushs the buffer before fork
     // The fork() call happens here
     pid = fork();
 
     if (pid < 0) {
         // Error occurred
-        err = errno;
-        fprintf(stderr, "Error - fork() failed: %s", strerror(err));
-        return false;
+        fprintf(stderr, "Error - fork() failed: %s", strerror(errno));
+        exit(EXIT_FAILURE);
     }
    else if (pid == 0) {
         // This block is executed by the CHILD process
-        FILE* output_file = fopen(outputfile,"w");
-        if(output_file == NULL){
-                    err = errno;
-            fprintf(output_file , "Error - failed to open file: %s", strerror(err));
-
-            return false;
+        // write only | create if does not exist | discard previous data
+        int fd = open (outputfile,  O_WRONLY | O_CREAT , O_TRUNC,0644);
+        //if file fails to open
+        if(fd == -1){
+            fprintf(stderr , "Error - failed to open file: %s", strerror(errno));
+            exit(EXIT_FAILURE);
         }
+        /*
+        dup2 redirects the output of a stream to a file descriptor.
+        1 is STDOUT
+        now both STDOUT and fd point data to the open file.
+        */
+        if(dup2(fd,1)== -1){
+            fprintf(stderr , "Error - dup2 failed: %s", strerror(errno));
+            close(fd);
+            exit(EXIT_FAILURE);
+        }
+        close(fd);//fd is not needed because all output now goes to the file
         int rt;
         rt = execv(command[0],command);
         if(rt == -1){
-            err = errno;
-            fprintf(output_file, "Error - execv() failed: %s", strerror(err));
-            fclose(output_file);
+            fprintf(stdout, "Error - execv() failed: %s", strerror(errno));
+            exit(EXIT_FAILURE);
+        }
+        exit(EXIT_SUCCESS);
+    } 
+ else {
+        // PARENT PROCESS
+        int status;
+        // Wait specifically for the child we just created
+        if (waitpid(pid, &status, 0) == -1) {
             return false;
         }
-    } 
-    else {
-        // This block is executed by the PARENT process
-        wait(NULL);//ignore the reason the child exited
+        //WEXITSTATUS(status) extracts the return value of the child
+        //WIFEXITED(status) checks if child exited properly
+        return (WIFEXITED(status) && WEXITSTATUS(status) == 0);
     }
-
-
-    va_end(args);
-
-    return true;
 }
